@@ -13,6 +13,28 @@ without the ".md" extension.
 This convention is used by
 [Oddmu](https://src.alexschroeder.ch/oddmu.git), for example.
 
+## Installation
+
+To install using systemd, for the current user:
+
+Make necessary changes to `markdown-gopher.service`.
+
+These keys need changing, in particular:
+
+```
+ExecStart=/home/alex/bin/markdown-gopher
+WorkingDirectory=/home/alex/alexschroeder.ch/wiki
+Environment="GOPHER_HOST=alexschroeder.ch"
+```
+
+Enable unit:
+
+```
+sudo systemctl enable --now /home/alex/farm/markdown-gopher.service
+```
+
+## License
+
 The code of the server is released under the AGPL 3.
 
 The code of the renderer is released under the GPL 3. It is based on

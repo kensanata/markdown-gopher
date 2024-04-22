@@ -19,8 +19,15 @@ import (
 
 func main() {
 	gopher.HandleFunc("/", serve)
-	port := 7000
-	addr := fmt.Sprintf("localhost:%d", port)
+	port := os.Getenv("GOPHER_PORT")
+	if port == "" {
+		port = "70"
+	}
+	hostname := os.Getenv("GOPHER_HOST")
+	if hostname == "" {
+		hostname = "localhost"
+	}
+	addr := fmt.Sprintf("%s:%s", hostname, port)
 	fmt.Printf("Listening on %s\n", addr)
 	log.Fatal(gopher.ListenAndServe(addr, nil))
 }
