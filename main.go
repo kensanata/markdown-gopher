@@ -13,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"src.alexschroeder.ch/markdown-gopher/renderer"
 	"strings"
 )
 
@@ -104,7 +103,7 @@ func menu(w gopher.ResponseWriter, r *gopher.Request, path string) {
 				return err
 			}
 			if p == path {
-				return nil;
+				return nil
 			} else if info.IsDir() {
 				return filepath.SkipDir
 			} else if strings.HasSuffix(path, ".md") {
@@ -127,7 +126,7 @@ func load(path string) ([]byte, error) {
 		return nil, err
 	}
 	ast := markdown.Parse(md, wikiParser())
-	content := markdown.Render(ast, renderer.NewRenderer())
+	content := markdown.Render(ast, NewRenderer())
 	return content, nil
 }
 
