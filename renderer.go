@@ -21,18 +21,20 @@ import (
 var (
 	newline        = "\n"
 	space          = " "
-	rule           = "-----------------------------------------------------------------"
+	rule           = "----------------------------------------------------------------------"
 	majorUnderline = "="
 	minorUnderline = "-"
 )
 
 // Wrapper is a wordwrapper based on https://godoc.org/github.com/karrick/golinewrap
 type Wrapper struct {
+	first        bool
 	line         *bytes.Buffer
 	max          int // max number of runes to fill for each line
 	remaining    int // remaining runes in the line buffer
 	prefixLength int
 	prefix       string
+	prefixSkipNext bool
 }
 
 // Renderer implements markdown.Renderer based on https://github.com/tdemin/gmnhg
@@ -43,12 +45,14 @@ type Renderer struct {
 // NewRenderer returns a new Renderer.
 func NewRenderer() Renderer {
 	wrapper := Wrapper{
+		first:     true,
 		line:      bytes.NewBuffer(make([]byte, 0, 73)),
 		max:       72,
 		remaining: 72,
 		prefix:    "",
+		prefixSkipNext: false,
 	}
-	return Renderer{buf: &wrapper}
+	return Renderer{ buf: &wrapper }
 }
 
 // setPrefix changes the prefix.
@@ -63,11 +67,11 @@ func (buf *Wrapper) write(w io.Writer, s string) {
 	if buf.remaining < required {
 		buf.newline(w)
 	}
+	buf.writePrefix()
 	buf.line.WriteString(s)
 	buf.remaining -= (required - 1)
 }
 
-// writePrefix writes the prefix, at the beginning of a line, if any.
 func (buf *Wrapper) writePrefix() {
 	if buf.max == buf.remaining && buf.prefix != "" {
 		buf.line.WriteString(buf.prefix)
@@ -80,7 +84,6 @@ func (buf *Wrapper) writePrefix() {
 // Calling newline also flushes the buffer.
 func (buf *Wrapper) writeWords(w io.Writer, text string) {
 	for _, word := range strings.Fields(text) {
-		buf.writePrefix()
 		buf.write(w, word+space)
 	}
 }
@@ -106,23 +109,29 @@ func (buf *Wrapper) flush(w io.Writer) {
 func (r Renderer) RenderHeader(w io.Writer, node ast.Node) {}
 
 // RenderFooter implements Renderer.RenderFooter(). As there is no footer, there is nothing to do, here.
-func (r Renderer) RenderFooter(w io.Writer, node ast.Node) {
-	r.buf.newline(w)
-}
+func (r Renderer) RenderFooter(w io.Writer, node ast.Node) {}
 
 // RenderNode implements Renderer.RenderNode(). This goes through every node and fills a buffer with words. As soon as
 // there are enough words for a line, it is written to the Writer.
 func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.WalkStatus {
+	fmt.Printf("%T %v\n", node, entering)
 	switch node := node.(type) {
 	case *ast.BlockQuote:
-		r.buf.setPrefix("> ")
+		if entering {
+			r.buf.setPrefix("> ")
+			r.buf.prefixSkipNext = true
+		} else {
+			r.buf.setPrefix("")
+		}
 	case *ast.HorizontalRule:
-		r.buf.newline(w)
+		r.paragraphSeparator(w)
 		r.buf.write(w, rule)
 		r.buf.newline(w)
-		r.buf.newline(w)
 	case *ast.Heading:
-		if !entering {
+		if entering {
+			r.paragraphSeparator(w)
+		} else {
+			// After the text of the heading, add underlining
 			r.buf.newline(w)
 			text := ast.GetFirstChild(node).AsLeaf()
 			var s string
@@ -133,10 +142,13 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 			}
 			r.buf.write(w, strings.Repeat(s, len(text.Literal)))
 			r.buf.newline(w)
-			r.buf.newline(w)
 		}
 	case *ast.Paragraph:
-		r.buf.setPrefix("")
+		if entering {
+			r.paragraphSeparator(w)
+		} else {
+			r.buf.newline(w)
+		}
 	case *ast.Text:
 		r.buf.writeWords(w, string(node.Literal))
 	case *ast.Document:
@@ -144,9 +156,21 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		text := node.AsLeaf()
 		if text != nil {
 			r.buf.writeWords(w, string(text.Literal))
-		} else {
-			fmt.Printf("Ignoring %T\n", node)
 		}
 	}
 	return ast.GoToNext
+}
+
+// paragraphSeparator writes a paragraph separator unless this is the first paragraph.
+func (r Renderer) paragraphSeparator(w io.Writer) {
+	if r.buf.first {
+		r.buf.first = false
+	} else {
+		if r.buf.prefixSkipNext {
+			r.buf.prefixSkipNext = false
+		} else {
+			r.buf.writePrefix()
+		}
+		r.buf.newline(w)
+	}
 }

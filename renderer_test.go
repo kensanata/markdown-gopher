@@ -40,6 +40,32 @@ func TestHeading2(t *testing.T) {
 	assert.Equal(t, expected, render(body))
 }
 
+func TestRule(t *testing.T) {
+	body := []byte("This is text.\n\n----\n\nThis is text.")
+	expected := "This is text.\n\n----------------------------------------------------------------------\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestQuote(t *testing.T) {
+	body := []byte("This is text.\n\n> Hier kommt ein Zitat. Es ist ein langes Zitat.\n" +
+		"Mit mehreren Sätzen. Und mehreren Zeilen.\n\nThis is text.")
+	expected := "This is text.\n\n> Hier kommt ein Zitat. Es ist ein langes Zitat. Mit mehreren Sätzen.\n> Und mehreren Zeilen.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestQuote2(t *testing.T) {
+	// strange but true: the empty line between two quoted lines does not result in two quoted blocks!
+	body := []byte("This is text.\n\n> Hier kommt ein Zitat.\n\n> Und das ist ein anderes Zitat.\n\nThis is text.")
+	expected := "This is text.\n\n> Hier kommt ein Zitat.\n>\n> Und das ist ein anderes Zitat.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestQuote3(t *testing.T) {
+	body := []byte("This is text.\n\n> Hier kommt ein Zitat.\n>\n> Mit zwei Paragraphen.\n\nThis is text.")
+	expected := "This is text.\n\n> Hier kommt ein Zitat.\n>\n> Mit zwei Paragraphen.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
 func render(input []byte) string {
 	p := parser.New()
 	ast := p.Parse(input)
