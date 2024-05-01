@@ -48,6 +48,7 @@ type Wrapper struct {
 	prefixSkip   bool // skip prefix when prefix changes
 	tab          *tablewriter.Table
 	header       bool // is this a header row for the table
+	footer       bool // is this a footer row for the table
 	row          []string
 }
 
@@ -252,14 +253,15 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 			r.buf.row = make([]string, 0)
 		} else if r.buf.header {
 			r.buf.tab.SetHeader(r.buf.row)
+		} else if r.buf.footer {
+			r.buf.tab.SetFooter(r.buf.row)
 		} else {
 			r.buf.tab.Append(r.buf.row)
 		}
 	case *ast.TableHeader:
-		if entering {
-			r.buf.row = make([]string, 0)
-		}
 		r.buf.header = entering
+	case *ast.TableFooter:
+		r.buf.footer = entering
 	case *ast.TableBody:
 	case *ast.TableCell:
 		if entering {

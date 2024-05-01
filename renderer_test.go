@@ -328,6 +328,57 @@ This is text.
 	assert.Equal(t, expected, render(body))
 }
 
+func TestTableFooter(t *testing.T) {
+	body := []byte(`This is text.
+
+Name    | Age
+--------|------
+Bob     | 27
+Alice   | 23
+========|======
+Total   | 50
+
+This is text.`)
+	expected := `This is text.
+
++-------+-----+
+| NAME  | AGE |
++-------+-----+
+| Bob   |  27 |
+| Alice |  23 |
++-------+-----+
+| TOTAL | 50  |
++-------+-----+
+
+This is text.
+`
+	assert.Equal(t, expected, render(body))
+}
+
+// not really well supported
+func TestTableSpan(t *testing.T) {
+	body := []byte(`This is text.
+
+Name    | Age
+--------|------
+Bob     ||
+Alice   | 23
+
+This is text.`)
+	expected := `This is text.
+
++-------+-----+
+| NAME  | AGE |
++-------+-----+
+| Bob   |
+| Alice |  23 |
++-------+-----+
+
+This is text.
+`
+	assert.Equal(t, expected, render(body))
+}
+
 func render(input []byte) string {
 	p := parser.New()
 	ast := p.Parse(input)
