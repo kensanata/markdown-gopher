@@ -7,11 +7,17 @@ text.
 
 When the selector is empty or points to a directory, the "index.md"
 file is parsed for list items starting with an asterisk in order to
-build a menu. The assumption is that these link to Markdown files
-without the ".md" extension.
+build a Gopher menu. The assumption is that these link to Markdown
+files without the ".md" extension.
 
 This convention is used by
 [Oddmu](https://src.alexschroeder.ch/oddmu.git), for example.
+
+## Limitations
+
+No other Gopher menus are shown and therefore there are no other links
+within the Gopher site. Anything that isn't listed from a bullet list
+on the top index page is therefore unreachable, organically.
 
 ## Installation
 
