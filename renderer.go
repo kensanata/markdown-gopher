@@ -12,7 +12,9 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/ast"
+	"github.com/olekukonko/tablewriter"
 	"io"
 	"strings"
 	"unicode"
@@ -44,11 +46,14 @@ type Wrapper struct {
 	prefix       string // the prefix for lines
 	prefixNext   string // the next prefix (for list items)
 	prefixSkip   bool // skip prefix when prefix changes
+	tab          *tablewriter.Table
+	header       bool // is this a header row for the table
+	row          []string
 }
 
 // Renderer implements markdown. The initial idea of how it was going to work are on https://github.com/tdemin/gmnhg.
 type Renderer struct {
-	buf *Wrapper
+	buf         *Wrapper
 }
 
 // push adds a new counter starting with 0
@@ -234,6 +239,37 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		separator := []byte("\n    ")
 		w.Write(separator)
 		w.Write(bytes.Replace(node.Literal, newline,  separator, bytes.Count(node.Literal, newline)-1))
+	case *ast.Table:
+		// The tablewriter needs to be fed cells in rows.
+		if entering {
+			r.buf.tab = tablewriter.NewWriter(w)
+			r.buf.newline(w)
+		} else {
+			r.buf.tab.Render()
+		}
+	case *ast.TableRow:
+		if entering {
+			r.buf.row = make([]string, 0)
+		} else if r.buf.header {
+			r.buf.tab.SetHeader(r.buf.row)
+		} else {
+			r.buf.tab.Append(r.buf.row)
+		}
+	case *ast.TableHeader:
+		if entering {
+			r.buf.row = make([]string, 0)
+		}
+		r.buf.header = entering
+	case *ast.TableBody:
+	case *ast.TableCell:
+		if entering {
+			// render the children of the table cell (without the table cell itself)
+			doc := &ast.Document{}
+			doc.SetChildren(node.GetChildren())
+			s := string(markdown.Render(doc, NewRenderer()))
+			r.buf.row = append(r.buf.row, s)
+			return ast.SkipChildren
+		}
 	case *ast.Text:
 		r.buf.writeWords(w, string(node.Literal))
 	case *ast.Code:
@@ -241,6 +277,9 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	case *ast.Emph:
 	case *ast.Strong:
 	case *ast.Document:
+		if !entering {
+			r.buf.line.WriteTo(w) // flush for TableCell
+		}
 	default:
 		text := node.AsLeaf()
 		if text != nil {

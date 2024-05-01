@@ -39,109 +39,292 @@ func TestLink(t *testing.T) {
 }
 
 func TestTwoLines(t *testing.T) {
-	body := []byte("This is text.\nAnd this is text.")
+	body := []byte(`This is text.
+And this is text.`)
 	expected := "This is text. And this is text.\n"
 	assert.Equal(t, expected, render(body))
 }
 
 func TestLongLine(t *testing.T) {
 	body := append([]byte(strings.Repeat("This is text. ", 10)), []byte("The End.\n")...)
-	expected := "This is text. This is text. This is text. This is text. This is text.\n" +
-		"This is text. This is text. This is text. This is text. This is text.\n" +
-		"The End.\n"
+	expected := `This is text. This is text. This is text. This is text. This is text.
+This is text. This is text. This is text. This is text. This is text.
+The End.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestHeading1(t *testing.T) {
-	body := []byte("# Heading\n\nThis is text.\n")
-	expected := "Heading\n=======\n\nThis is text.\n"
+	body := []byte(`# Heading
+
+This is text.
+`)
+	expected := `Heading
+=======
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestHeading2(t *testing.T) {
-	body := []byte("## Heading\n\nThis is text.\n")
-	expected := "Heading\n-------\n\nThis is text.\n"
+	body := []byte(`## Heading
+
+This is text.
+`)
+	expected := `Heading
+-------
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestRule(t *testing.T) {
-	body := []byte("This is text.\n\n----\n\nThis is text.")
-	expected := "This is text.\n\n----------------------------------------------------------------------\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+----
+
+This is text.`)
+	expected := `This is text.
+
+----------------------------------------------------------------------
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestQuote(t *testing.T) {
-	body := []byte("This is text.\n\n> Hier kommt ein Zitat. Es ist ein langes Zitat.\n" +
-		"Mit mehreren Sätzen. Und mehreren Zeilen.\n\nThis is text.")
-	expected := "This is text.\n\n> Hier kommt ein Zitat. Es ist ein langes Zitat. Mit mehreren Sätzen.\n> Und mehreren Zeilen.\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+> Hier kommt ein Zitat. Es ist ein langes Zitat. Mit mehreren Sätzen. Und mehreren Zeilen.
+
+This is text.`)
+	expected := `This is text.
+
+> Hier kommt ein Zitat. Es ist ein langes Zitat. Mit mehreren Sätzen.
+> Und mehreren Zeilen.
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestQuote2(t *testing.T) {
 	// strange but true: the empty line between two quoted lines does not result in two quoted blocks!
-	body := []byte("This is text.\n\n> Hier kommt ein Zitat.\n\n> Und das ist ein anderes Zitat.\n\nThis is text.")
-	expected := "This is text.\n\n> Hier kommt ein Zitat.\n>\n> Und das ist ein anderes Zitat.\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+> Hier kommt ein Zitat.
+
+> Und das ist ein anderes Zitat.
+
+This is text.`)
+	expected := `This is text.
+
+> Hier kommt ein Zitat.
+>
+> Und das ist ein anderes Zitat.
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestQuote3(t *testing.T) {
-	body := []byte("This is text.\n\n> Hier kommt ein Zitat.\n>\n> Mit zwei Paragraphen.\n\nThis is text.")
-	expected := "This is text.\n\n> Hier kommt ein Zitat.\n>\n> Mit zwei Paragraphen.\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+> Hier kommt ein Zitat.
+>
+> Mit zwei Paragraphen.
+
+This is text.`)
+	expected := `This is text.
+
+> Hier kommt ein Zitat.
+>
+> Mit zwei Paragraphen.
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestCode(t *testing.T) {
 	body := []byte("This is text.\n\n```\nsome code\nsome more code\n```\n\nThis is text.")
-	expected := "This is text.\n\n    some code\n    some more code\n\nThis is text.\n"
+	expected := `This is text.
+
+    some code
+    some more code
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestUnorderedList(t *testing.T) {
-	body := []byte("This is text.\n\n* This is an item.\n\nThis is text.")
-	expected := "This is text.\n\n* This is an item.\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+* This is an item.
+
+This is text.`)
+	expected := `This is text.
+
+* This is an item.
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestUnorderedList2(t *testing.T) {
-	body := []byte("This is text.\n\n* This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
-	expected := "This is text.\n\n* This is a very long item. This is a very long item. This is a very\n  long item. This is a very long item.\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+* This is a very long item. This is a very long item. This is a very long item. This is a very long item.
+
+This is text.`)
+	expected := `This is text.
+
+* This is a very long item. This is a very long item. This is a very
+  long item. This is a very long item.
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestUnorderedList3(t *testing.T) {
-	body := []byte("This is text.\n\n* This is an item.\n\n* This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
-	expected := "This is text.\n\n* This is an item.\n\n* This is a very long item. This is a very long item. This is a very\n  long item. This is a very long item.\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+* This is an item.
+
+* This is a very long item. This is a very long item. This is a very long item. This is a very long item.
+
+This is text.`)
+	expected := `This is text.
+
+* This is an item.
+
+* This is a very long item. This is a very long item. This is a very
+  long item. This is a very long item.
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestUnorderedList4(t *testing.T) {
-	body := []byte("This is text.\n\n* This is an item.\n\n    * This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
-	expected := "This is text.\n\n* This is an item.\n\n  * This is a very long item. This is a very long item. This is a very\n    long item. This is a very long item.\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+* This is an item.
+
+    * This is a very long item. This is a very long item. This is a very long item. This is a very long item.
+
+This is text.`)
+	expected := `This is text.
+
+* This is an item.
+
+  * This is a very long item. This is a very long item. This is a very
+    long item. This is a very long item.
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 
 func TestOrderedList(t *testing.T) {
-	body := []byte("This is text.\n\n1. This is an item.\n\nThis is text.")
-	expected := "This is text.\n\n1. This is an item.\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+1. This is an item.
+
+This is text.`)
+	expected := `This is text.
+
+1. This is an item.
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestOrderedList2(t *testing.T) {
-	body := []byte("This is text.\n\n1. This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
-	expected := "This is text.\n\n1. This is a very long item. This is a very long item. This is a very\n   long item. This is a very long item.\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+1. This is a very long item. This is a very long item. This is a very long item. This is a very long item.
+
+This is text.`)
+	expected := `This is text.
+
+1. This is a very long item. This is a very long item. This is a very
+   long item. This is a very long item.
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestOrderedList3(t *testing.T) {
-	body := []byte("This is text.\n\n1. This is an item.\n\n1. This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
-	expected := "This is text.\n\n1. This is an item.\n\n2. This is a very long item. This is a very long item. This is a very\n   long item. This is a very long item.\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+1. This is an item.
+
+1. This is a very long item. This is a very long item. This is a very long item. This is a very long item.
+
+This is text.`)
+	expected := `This is text.
+
+1. This is an item.
+
+2. This is a very long item. This is a very long item. This is a very
+   long item. This is a very long item.
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
 func TestOrderedList4(t *testing.T) {
-	body := []byte("This is text.\n\n1. This is an item.\n\n    1. This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
-	expected := "This is text.\n\n1. This is an item.\n\n  1. This is a very long item. This is a very long item. This is a\n     very long item. This is a very long item.\n\nThis is text.\n"
+	body := []byte(`This is text.
+
+1. This is an item.
+
+    1. This is a very long item. This is a very long item. This is a very long item. This is a very long item.
+
+This is text.`)
+	expected := `This is text.
+
+1. This is an item.
+
+  1. This is a very long item. This is a very long item. This is a
+     very long item. This is a very long item.
+
+This is text.
+`
+	assert.Equal(t, expected, render(body))
+}
+
+func TestTable(t *testing.T) {
+	body := []byte(`This is text.
+
+Name    | Age
+--------|------
+Bob     | 27
+Alice   | 23
+
+This is text.`)
+	expected := `This is text.
+
++-------+-----+
+| NAME  | AGE |
++-------+-----+
+| Bob   |  27 |
+| Alice |  23 |
++-------+-----+
+
+This is text.
+`
 	assert.Equal(t, expected, render(body))
 }
 
