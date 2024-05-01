@@ -172,7 +172,7 @@ func (r Renderer) RenderFooter(w io.Writer, node ast.Node) {}
 // RenderNode implements Renderer.RenderNode(). This goes through every node and fills a buffer with words. As soon as
 // there are enough words for a line, it is written to the Writer.
 func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.WalkStatus {
-	fmt.Printf("%T %v\n", node, entering)
+	// fmt.Printf("%T %v\n", node, entering)
 	switch node := node.(type) {
 	case *ast.BlockQuote:
 		if entering {
