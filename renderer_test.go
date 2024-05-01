@@ -66,6 +66,55 @@ func TestQuote3(t *testing.T) {
 	assert.Equal(t, expected, render(body))
 }
 
+func TestUnorderedList(t *testing.T) {
+	body := []byte("This is text.\n\n* This is an item.\n\nThis is text.")
+	expected := "This is text.\n\n* This is an item.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestUnorderedList2(t *testing.T) {
+	body := []byte("This is text.\n\n* This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
+	expected := "This is text.\n\n* This is a very long item. This is a very long item. This is a very\n  long item. This is a very long item.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestUnorderedList3(t *testing.T) {
+	body := []byte("This is text.\n\n* This is an item.\n\n* This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
+	expected := "This is text.\n\n* This is an item.\n\n* This is a very long item. This is a very long item. This is a very\n  long item. This is a very long item.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestUnorderedList4(t *testing.T) {
+	body := []byte("This is text.\n\n* This is an item.\n\n    * This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
+	expected := "This is text.\n\n* This is an item.\n\n  * This is a very long item. This is a very long item. This is a very\n    long item. This is a very long item.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+
+func TestOrderedList(t *testing.T) {
+	body := []byte("This is text.\n\n1. This is an item.\n\nThis is text.")
+	expected := "This is text.\n\n1. This is an item.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestOrderedList2(t *testing.T) {
+	body := []byte("This is text.\n\n1. This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
+	expected := "This is text.\n\n1. This is a very long item. This is a very long item. This is a very\n   long item. This is a very long item.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestOrderedList3(t *testing.T) {
+	body := []byte("This is text.\n\n1. This is an item.\n\n1. This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
+	expected := "This is text.\n\n1. This is an item.\n\n2. This is a very long item. This is a very long item. This is a very\n   long item. This is a very long item.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestOrderedList4(t *testing.T) {
+	body := []byte("This is text.\n\n1. This is an item.\n\n    1. This is a very long item. This is a very long item. This is a very long item. This is a very long item.\n\nThis is text.")
+	expected := "This is text.\n\n1. This is an item.\n\n  1. This is a very long item. This is a very long item. This is a\n     very long item. This is a very long item.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
 func render(input []byte) string {
 	p := parser.New()
 	ast := p.Parse(input)

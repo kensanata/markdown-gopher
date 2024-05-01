@@ -22,46 +22,78 @@ var (
 	newline        = "\n"
 	space          = " "
 	rule           = "----------------------------------------------------------------------"
+	bullet         = "*"
 	majorUnderline = "="
 	minorUnderline = "-"
 )
 
-// Wrapper is a wordwrapper based on https://godoc.org/github.com/karrick/golinewrap
+// Counter is a counter for list items.
+type Counter struct {
+	counter []int
+}
+
+// Wrapper is a wordwrapper based on the ideas in https://godoc.org/github.com/karrick/golinewrap.
 type Wrapper struct {
-	first        bool
+	Counter
+	first        bool // is this the first block of the document
 	line         *bytes.Buffer
 	max          int // max number of runes to fill for each line
 	remaining    int // remaining runes in the line buffer
-	prefixLength int
-	prefix       string
-	prefixSkipNext bool
+	prefixLength int // how long the prefix is
+	prefix       string // the prefix for lines
+	prefixNext   string // the next prefix (for list items)
+	prefixSkip   bool // skip prefix when prefix changes
 }
 
-// Renderer implements markdown.Renderer based on https://github.com/tdemin/gmnhg
+// Renderer implements markdown. The initial idea of how it was going to work are on https://github.com/tdemin/gmnhg.
 type Renderer struct {
 	buf *Wrapper
 }
 
-// NewRenderer returns a new Renderer.
-func NewRenderer() Renderer {
-	wrapper := Wrapper{
-		first:     true,
-		line:      bytes.NewBuffer(make([]byte, 0, 73)),
-		max:       72,
-		remaining: 72,
-		prefix:    "",
-		prefixSkipNext: false,
-	}
-	return Renderer{ buf: &wrapper }
+// push adds a new counter starting with 0
+func (c *Counter) push() {
+	c.counter = append(c.counter, 0)
+}
+
+// pop removes the last counter
+func (c *Counter) pop() {
+	c.counter = c.counter[:len(c.counter)-1]
+}
+
+// inc increases the current counter by one
+func (c *Counter) inc() {
+	c.counter[len(c.counter)-1]++
+}
+
+// val returns the current counter value
+func (c *Counter) value() int {
+	return c.counter[len(c.counter)-1]
 }
 
 // setPrefix changes the prefix.
-func (w *Wrapper) setPrefix(prefix string) {
-	w.prefix = prefix
-	w.prefixLength = utf8.RuneCountInString(prefix)
+func (buf *Wrapper) setPrefix(prefix string) {
+	buf.prefix = prefix
+	buf.prefixLength = utf8.RuneCountInString(prefix)
+	if (buf.prefix == "") {
+		buf.prefixNext = ""
+	}
 }
 
-// write writes a string to the buffer, without adding a space or a newline.
+// writePrefix writes the prefix, but only at the beginning of the line (and if a prefix is set). Call it anytime
+// something is written to the line.
+func (buf *Wrapper) writePrefix() {
+	if buf.max == buf.remaining && buf.prefix != "" {
+		buf.line.WriteString(buf.prefix)
+		buf.remaining -= buf.prefixLength
+		if buf.prefixNext != "" {
+			buf.setPrefix(buf.prefixNext)
+			buf.prefixNext = ""
+		}
+	}
+}
+
+// write writes a string to the buffer. If necessary, a newline is prepended and the previous line is flushed to the
+// writer. No space or a newline is added at the end. Use this for a horizontal rule or to underline headings.
 func (buf *Wrapper) write(w io.Writer, s string) {
 	required := utf8.RuneCountInString(s) + 1
 	if buf.remaining < required {
@@ -72,23 +104,17 @@ func (buf *Wrapper) write(w io.Writer, s string) {
 	buf.remaining -= (required - 1)
 }
 
-func (buf *Wrapper) writePrefix() {
-	if buf.max == buf.remaining && buf.prefix != "" {
-		buf.line.WriteString(buf.prefix)
-		buf.remaining -= buf.prefixLength
-	}
-}
-
-// writeWords appends the words in the text to the current paragraph. The prefix must be set beforehand, if at all. The
-// text ends with a space. Calling newline will remove that space again. If you don't want this space, use write.
-// Calling newline also flushes the buffer.
+// writeWords appends the words in the text to the line. The prefix must already be set, if at all. A space is
+// automatically added to the line. The words are written using the write function, which might call newline, which
+// flushes the line. At that point, the trailing space is going to be trimmed from the line.
 func (buf *Wrapper) writeWords(w io.Writer, text string) {
 	for _, word := range strings.Fields(text) {
 		buf.write(w, word+space)
 	}
 }
 
-// newline appends newline to line buffer then flushes to underlying writer because this library is line based.
+// newline trims a trailing space from the line, appends a newline and flushes the line to the underlying writer. Every
+// block element must end with a call to newline or the last line of the document will not be flushed.
 func (buf *Wrapper) newline(w io.Writer) {
 	b := buf.line.Bytes()
 	if l := len(b); l > 0 && b[l-1] == ' ' {
@@ -97,12 +123,21 @@ func (buf *Wrapper) newline(w io.Writer) {
 	}
 	buf.line.WriteString(newline)
 	buf.remaining = buf.max
-	buf.flush(w)
+	buf.line.WriteTo(w)
 }
 
-// flush writes any remaining runes in the line out to the writer, without adding a newline.
-func (buf *Wrapper) flush(w io.Writer) {
-	buf.line.WriteTo(w)
+// NewRenderer returns a new Renderer.
+func NewRenderer() Renderer {
+	wrapper := Wrapper{
+		first:      true,
+		line:       bytes.NewBuffer(make([]byte, 0, 73)),
+		max:        72,
+		remaining:  72,
+		prefix:     "",
+		prefixNext: "",
+		prefixSkip: false,
+	}
+	return Renderer{buf: &wrapper}
 }
 
 // RenderHeader implements Renderer.RenderHeader(). As there is no header, there is nothing to do, here.
@@ -119,7 +154,35 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	case *ast.BlockQuote:
 		if entering {
 			r.buf.setPrefix("> ")
-			r.buf.prefixSkipNext = true
+			r.buf.prefixSkip = true
+		} else {
+			r.buf.setPrefix("")
+		}
+	case *ast.List:
+		if entering {
+			r.buf.push()
+		} else {
+			r.buf.pop()
+		}
+	case *ast.ListItem:
+		if entering {
+			r.buf.inc()
+			isOrdered := (node.ListFlags & ast.ListTypeOrdered) == ast.ListTypeOrdered
+			isDefinition := (node.ListFlags & ast.ListTypeTerm) == ast.ListTypeTerm
+			isUnordered := !isOrdered && !isDefinition
+			indentation := strings.Repeat(space, 2 * (len(r.buf.counter)-1))
+			if isUnordered {
+				r.buf.setPrefix(indentation + bullet + space)
+				r.buf.prefixNext = strings.Repeat(space, len(r.buf.prefix))
+			} else if isOrdered {
+				r.buf.setPrefix(fmt.Sprintf("%s%d. ", indentation, r.buf.value()))
+				r.buf.prefixNext = strings.Repeat(space, len(r.buf.prefix))
+			} else if r.buf.value() > 1 {
+				// definition lists get extra line breaks
+				r.buf.newline(w)
+				r.buf.setPrefix(indentation)
+			}
+			r.buf.prefixSkip = true
 		} else {
 			r.buf.setPrefix("")
 		}
@@ -161,13 +224,16 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	return ast.GoToNext
 }
 
-// paragraphSeparator writes a paragraph separator unless this is the first paragraph.
+// paragraphSeparator writes a paragraph separator unless this is the first paragraph. Furthermore, when a new type
+// starts (such as a quote), the prefix is skipped once before the newline. The result is that when a quoted paragraph
+// follows a regular paragraph, the line is empty but if a quoted paragraph follows another quoted paragraph, the line
+// is quoted.
 func (r Renderer) paragraphSeparator(w io.Writer) {
 	if r.buf.first {
 		r.buf.first = false
 	} else {
-		if r.buf.prefixSkipNext {
-			r.buf.prefixSkipNext = false
+		if r.buf.prefixSkip {
+			r.buf.prefixSkip = false
 		} else {
 			r.buf.writePrefix()
 		}
