@@ -14,6 +14,30 @@ func TestText(t *testing.T) {
 	assert.Equal(t, expected, render(body))
 }
 
+func TestEmphasis(t *testing.T) {
+	body := []byte("This is *italic text*.\n")
+	expected := "This is italic text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestStrong(t *testing.T) {
+	body := []byte("This is **bold text**.\n")
+	expected := "This is bold text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestInlineCode(t *testing.T) {
+	body := []byte("This is `some code`.\n")
+	expected := "This is some code.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestLink(t *testing.T) {
+	body := []byte("This is [a link](https://example.com).\n")
+	expected := "This is a link.\n"
+	assert.Equal(t, expected, render(body))
+}
+
 func TestTwoLines(t *testing.T) {
 	body := []byte("This is text.\nAnd this is text.")
 	expected := "This is text. And this is text.\n"
@@ -63,6 +87,12 @@ func TestQuote2(t *testing.T) {
 func TestQuote3(t *testing.T) {
 	body := []byte("This is text.\n\n> Hier kommt ein Zitat.\n>\n> Mit zwei Paragraphen.\n\nThis is text.")
 	expected := "This is text.\n\n> Hier kommt ein Zitat.\n>\n> Mit zwei Paragraphen.\n\nThis is text.\n"
+	assert.Equal(t, expected, render(body))
+}
+
+func TestCode(t *testing.T) {
+	body := []byte("This is text.\n\n```\nsome code\nsome more code\n```\n\nThis is text.")
+	expected := "This is text.\n\n    some code\n    some more code\n\nThis is text.\n"
 	assert.Equal(t, expected, render(body))
 }
 

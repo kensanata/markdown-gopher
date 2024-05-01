@@ -15,6 +15,7 @@ import (
 	"github.com/gomarkdown/markdown/ast"
 	"io"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -70,6 +71,14 @@ func (c *Counter) value() int {
 	return c.counter[len(c.counter)-1]
 }
 
+// trim removes the trailing space of the buffer, if any.
+func (buf *Wrapper) trim() {
+	b := buf.line.Bytes()
+	if l := len(b); l > 0 && b[l-1] == ' ' {
+		buf.line.Truncate(l - 1)
+	}
+}
+
 // setPrefix changes the prefix.
 func (buf *Wrapper) setPrefix(prefix string) {
 	buf.prefix = prefix
@@ -104,23 +113,31 @@ func (buf *Wrapper) write(w io.Writer, s string) {
 	buf.remaining -= (required - 1)
 }
 
-// writeWords appends the words in the text to the line. The prefix must already be set, if at all. A space is
-// automatically added to the line. The words are written using the write function, which might call newline, which
-// flushes the line. At that point, the trailing space is going to be trimmed from the line.
+// writeWords appends the words in the text to the line. The prefix must already be set, if at all. If the text starts
+// or ends with whitespace, a space is prefixed or suffixed, respectively. The words are written using the write
+// function, which might call newline, which flushes the line. At that point, a trailing space is going to be trimmed
+// from the line.
 func (buf *Wrapper) writeWords(w io.Writer, text string) {
+	// if the text starts with whitespace, prepend a single space
+	rune, size := utf8.DecodeRuneInString(text)
+	if size > 0 && unicode.IsSpace(rune) {
+		buf.write(w, space)
+	}
+	// always add a single space after every word
 	for _, word := range strings.Fields(text) {
 		buf.write(w, word+space)
+	}
+	// if the text doesn't end with whitespace, trim that last space again
+	rune, size = utf8.DecodeLastRuneInString(text)
+	if size == 0 || !unicode.IsSpace(rune) {
+		buf.trim()
 	}
 }
 
 // newline trims a trailing space from the line, appends a newline and flushes the line to the underlying writer. Every
 // block element must end with a call to newline or the last line of the document will not be flushed.
 func (buf *Wrapper) newline(w io.Writer) {
-	b := buf.line.Bytes()
-	if l := len(b); l > 0 && b[l-1] == ' ' {
-		// remove final space character from line buffer
-		buf.line.Truncate(l - 1)
-	}
+	buf.trim()
 	buf.line.WriteString(newline)
 	buf.remaining = buf.max
 	buf.line.WriteTo(w)
@@ -212,8 +229,17 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		} else {
 			r.buf.newline(w)
 		}
+	case *ast.CodeBlock:
+		newline := []byte("\n")
+		separator := []byte("\n    ")
+		w.Write(separator)
+		w.Write(bytes.Replace(node.Literal, newline,  separator, bytes.Count(node.Literal, newline)-1))
 	case *ast.Text:
 		r.buf.writeWords(w, string(node.Literal))
+	case *ast.Code:
+		r.buf.writeWords(w, string(node.Literal))
+	case *ast.Emph:
+	case *ast.Strong:
 	case *ast.Document:
 	default:
 		text := node.AsLeaf()
