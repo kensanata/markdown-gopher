@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/ast"
+	"jaytaylor.com/html2text"
 	"github.com/olekukonko/tablewriter"
 	"io"
 	"strings"
@@ -281,6 +282,12 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	case *ast.Document:
 		if !entering {
 			r.buf.line.WriteTo(w) // flush for TableCell
+		}
+	case *ast.HTMLBlock:
+		r.buf.newline(w)
+		text, err := html2text.FromReader(bytes.NewReader(node.Literal), html2text.Options{PrettyTables: true})
+		if err == nil {
+			r.buf.write(w, text)
 		}
 	default:
 		text := node.AsLeaf()

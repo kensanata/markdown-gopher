@@ -379,6 +379,38 @@ This is text.
 	assert.Equal(t, expected, render(body))
 }
 
+func TestHtmlBlock(t *testing.T) {
+	body := []byte(`Here are some notifications:
+
+<div class="chat">
+<style>
+.chat {
+    padding: 20px; }
+.chat p {
+    color: #000;
+    padding: 3px 1ch;
+    max-width: 50ch;
+    width: max-content;
+    border-radius: 6px; border: 1px outset #eee; }
+.chat span {
+    display: inline-block;
+    background-color: #eee;
+    padding: 2px 3px;
+    margin: 2px;
+    border-radius: 6px; border: 1px outset #eee; }
+}
+</style>
+<p>Alex 🌈 🦄 🧞 Sound engineer be engineering the sound!<br>
+   <span>🎵 1</span> <span>🛠️ 2</span> <span>👍 1</span>
+</div>
+`)
+	expected := `Here are some notifications:
+
+Alex 🌈 🦄 🧞 Sound engineer be engineering the sound!
+🎵 1 🛠️ 2 👍 1`
+	assert.Equal(t, expected, render(body))
+}
+
 func render(input []byte) string {
 	p := parser.New()
 	ast := p.Parse(input)
